@@ -31,7 +31,6 @@ cmd_ls() {
         coll=-
         printf '%-5s %3d %-20s %s\n' ready $n $coll $d:t
     done
-    $all || return
     for d in $dropbox/*/*(/N); do
         set -- $d/batch_manifest.*.*(.N)
         coll=$1:h:h:t
@@ -39,6 +38,7 @@ cmd_ls() {
         n=$(cat $d/content/*.xml | fgrep -c '</Item>')
         case $1 in
             (*.processed)
+                $all || continue
                 result=done ;;
             (*.processing)
                 result=proc ;;
