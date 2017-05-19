@@ -14,7 +14,7 @@ main() {
 
 cmd_ls() {
     typeset opt all=false onlycoll
-    typeset usagestr='ls [-a] [-c COLL]'
+    typeset usagestr='ls [-a] [-c STR]'
     while getopts :nac: opt; do
         case $opt in
             (a) all=true ;;
@@ -48,14 +48,6 @@ cmd_ls() {
         esac
         bibs=( $(bibids $1:r) )
         printf '%-5s %3d %-20s %s => %s\n' $result $n $coll $d:t "$(print $bibs)"
-    done
-}
-
-bibids() {
-    typeset b
-    sed -n 3,\$p $1 | cut -f1 -d, |
-    while read b; do
-        printf '%d\n' $b
     done
 }
 
@@ -101,6 +93,14 @@ cmd_ingest() {
             mv $pkgdir $dropbox/$coll/
             print $pkgdir:t $bibids >> avin.log
         fi
+    done
+}
+
+bibids() {
+    typeset b
+    sed -n 3,\$p $1 | cut -f1 -d, |
+    while read b; do
+        printf '%d\n' $b
     done
 }
 
