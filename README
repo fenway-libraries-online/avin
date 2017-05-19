@@ -1,0 +1,20 @@
+avin is used to manage Avalon Media System batch ingest packages
+
+Commands:
+
+    avin ls [-a] [-c STR]
+
+        List batches
+
+            -a          include batches that have been ingested
+            -c STR      limit to collections whose name contains STR
+
+    avin ingest [-na] COLLECTION [PKGDIR...]
+
+        Ingest one or more batches
+
+            -a          ingest all available batches
+            -n          dry run -- print what would be done
+
+            COLLECTION  full name of the collection into which to ingest
+            PKGDIR...   one or more batch ingest package directories
