@@ -1,0 +1,118 @@
+#!/bin/zsh -e
+
+typeset prog=$0
+typeset root=/var/local/avalon inbox=inbox dropbox=masterfiles/dropbox
+
+cd $root
+
+main() {
+    (( # > 0 )) || set ls
+    typeset cmd=cmd_$1; shift
+    grep -q "^$cmd()" $prog || usage
+    $cmd "$@"
+}
+
+cmd_ls() {
+    typeset opt all=false onlycoll
+    typeset usagestr='ls [-a] [-c COLLGLOB]'
+    while getopts :nac: opt; do
+        case $opt in
+            (a) all=true ;;
+            (c) onlycoll=$OPTARG ;;
+            (*) usage $usagestr ;;
+        esac
+    done
+    shift $(( OPTIND - 1 ))
+    typeset coll result
+    typeset -a bibs
+    integer n
+    for d in $inbox/*(/N); do
+        n=$(cat $d/content/*.xml | fgrep -c '</Item>')
+        coll=-
+        printf '%-5s %3d %-20s %s\n' ready $n $coll $d:t
+    done
+    $all || return
+    for d in $dropbox/*/*(/N); do
+        set -- $d/batch_manifest.*.*(.N)
+        coll=$1:h:h:t
+        [[ -z $onlycoll || $coll =~ $onlycoll ]] || continue
+        n=$(cat $d/content/*.xml | fgrep -c '</Item>')
+        case $1 in
+            (*.processed)
+                result=done ;;
+            (*.processing)
+                result=proc ;;
+            (*.error)
+                result=error ;;
+            (*) continue ;;
+        esac
+        bibs=( $(bibids $1:r) )
+        printf '%-5s %3d %-20s %s => %s\n' $result $n $coll $d:t "$(print $bibs)"
+    done
+}
+
+bibids() {
+    typeset b
+    sed -n 3,\$p $1 | cut -f1 -d, |
+    while read b; do
+        printf '%d\n' $b
+    done
+}
+
+cmd_ingest() {
+    typeset opt dryrun=false all=false
+    typeset usagestr='ingest [-na] COLLECTION [PKGDIR...]'
+    while getopts :na opt; do
+        case $opt in
+            (n) dryrun=true ;;
+            (a) all=true ;;
+            (*) usage $usagestr ;;
+        esac
+    done
+    shift $(( OPTIND - 1 ))
+    (( $# > 0 )) || usage $usagestr
+    typeset coll="$1" pkgdir; shift
+    if $all; then
+        (( $# == 0 )) || usage $usagestr
+        print "INBOX $inbox" >&2
+        set -- $inbox/*(/N)
+        (( $# > 0 )) || exit 0
+    fi
+    (( $# > 0 )) || usage $usagestr
+    [[ -e $dropbox/$coll ]] || fatal "no such collection: $coll"
+    if $dryrun; then
+        print "Dry run: ingest into $coll" >&2
+    else
+        print "Ingest into $coll" >&2
+    fi
+    for pkgdir in $@; do
+        pkgdir=$inbox/$pkgdir:t
+    	[[ -d $pkgdir ]] || fatal "no such ingest package: $pkgdir:t"
+        [[ -f $pkgdir/batch_manifest.csv ]] || fatal "no manifest: $pkgdir:t"
+        (( $(wc -l < $pkgdir/batch_manifest.csv) > 2 )) || fatal "bodiless manifest: $pkgdir:t"
+        [[ -d $pkgdir/content ]] || fatal "no content: $pkgdir:t"
+        bibids=( $(perl -ne 'print $1, "\n" if $. > 2 && /^([^,]+),/' $pkgdir/batch_manifest.csv) )
+        if $dryrun; then
+            print "chmod 777 $pkgdir" >&2
+            print "mv $pkgdir $dropbox/$coll/" >&2
+            print "* $pkgdir:t $bibids"
+        else
+            chmod 777 $pkgdir
+            mv $pkgdir $dropbox/$coll/
+            print $pkgdir:t $bibids >> avin.log
+        fi
+    done
+}
+
+usage() {
+    typeset msg="${*:-'COMMAND [ARG...]'}"
+    print "usage: $prog:t $msg" >&2
+    exit 1
+}
+
+fatal() {
+    print $prog:t: $@ >&2
+    exit 2
+}
+
+main "$@"
