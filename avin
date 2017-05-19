@@ -14,7 +14,7 @@ main() {
 
 cmd_ls() {
     typeset opt all=false onlycoll
-    typeset usagestr='ls [-a] [-c COLLGLOB]'
+    typeset usagestr='ls [-a] [-c COLL]'
     while getopts :nac: opt; do
         case $opt in
             (a) all=true ;;
