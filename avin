@@ -75,7 +75,7 @@ cmd_ingest() {
     if $dryrun; then
         print "Dry run: ingest into $coll" >&2
     else
-        print "Ingest into $coll" >&2
+        print "Begin ingest into $coll" >&2
     fi
     for pkgdir in $@; do
         pkgdir=$inbox/$pkgdir:t
